@@ -12,7 +12,7 @@ from typing import Optional
 import aiohttp
 from datetime import datetime
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, InputMediaPhoto
 from telegram.ext import (
     Application,
     CommandHandler,
@@ -488,16 +488,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def ask_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE, product_id: str):
-    """Ask user for quantity"""
+    """Ask user for quantity with product image"""
     context.user_data['selected_product'] = product_id
     
-    # Get product details to show name
+    # Get product details to show name and image
     products_data = await api_client.get_products()
     product_name = "Product"
+    product_image = None
+    product_price = "N/A"
+    
     if products_data:
         for p in products_data.get('products', []):
             if p['id'] == product_id:
                 product_name = p['name']
+                product_image = p.get('image')
+                product_price = p.get('price', 'N/A')
                 break
     
     keyboard = [
@@ -511,11 +516,23 @@ async def ask_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE, produ
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    await update.callback_query.edit_message_text(
-        text=f"*{product_name}*\n\n*How many items would you like?*",
-        reply_markup=reply_markup,
-        parse_mode="Markdown"
-    )
+    # Send photo with caption if image exists, otherwise just text
+    if product_image:
+        caption = f"*{product_name}*\n\n💰 Price: ${product_price}\n\n*How many items would you like?*"
+        await update.callback_query.edit_message_media(
+            media=InputMediaPhoto(
+                media=product_image,
+                caption=caption,
+                parse_mode="Markdown"
+            ),
+            reply_markup=reply_markup
+        )
+    else:
+        await update.callback_query.edit_message_text(
+            text=f"*{product_name}*\n💰 Price: ${product_price}\n\n*How many items would you like?*",
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
 
 async def handle_quantity_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle quantity selection and add to cart"""

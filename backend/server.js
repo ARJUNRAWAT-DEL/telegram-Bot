@@ -18,11 +18,41 @@ const products = new Map();
 // Initialize sample products
 function initializeProducts() {
   const sampleProducts = [
-    { id: 'PROD001', name: 'Laptop', price: 999.99, stock: 10 },
-    { id: 'PROD002', name: 'Smartphone', price: 599.99, stock: 25 },
-    { id: 'PROD003', name: 'Headphones', price: 149.99, stock: 50 },
-    { id: 'PROD004', name: 'Tablet', price: 399.99, stock: 15 },
-    { id: 'PROD005', name: 'Smartwatch', price: 199.99, stock: 30 }
+    { 
+      id: 'PROD001', 
+      name: 'Laptop', 
+      price: 999.99, 
+      stock: 10,
+      image: 'https://images.unsplash.com/photo-1588872657840-218e7e66e13e?w=400&h=300&fit=crop'
+    },
+    { 
+      id: 'PROD002', 
+      name: 'Smartphone', 
+      price: 599.99, 
+      stock: 25,
+      image: 'https://images.unsplash.com/photo-1511707267537-b85faf00021e?w=400&h=300&fit=crop'
+    },
+    { 
+      id: 'PROD003', 
+      name: 'Headphones', 
+      price: 149.99, 
+      stock: 50,
+      image: 'https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=300&fit=crop'
+    },
+    { 
+      id: 'PROD004', 
+      name: 'Tablet', 
+      price: 399.99, 
+      stock: 15,
+      image: 'https://images.unsplash.com/photo-1526045612212-70caf35b5ef8?w=400&h=300&fit=crop'
+    },
+    { 
+      id: 'PROD005', 
+      name: 'Smartwatch', 
+      price: 199.99, 
+      stock: 30,
+      image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=300&fit=crop'
+    }
   ];
   sampleProducts.forEach(product => {
     products.set(product.id, product);
