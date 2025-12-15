@@ -281,12 +281,12 @@ async def show_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
     
     products = products_data['products']
-    products_text = "*📦 Available Products:*\n\n"
+    products_text = "*🛍️ Available Products:*\n\n"
     
     keyboard = []
     for product in products:
         products_text += f"• *{product['name']}* - ${product['price']}\n"
-        products_text += f"  Stock: {product['stock']} items\n\n"
+        products_text += f"  📦 Stock: {product['stock']} items\n\n"
         
         keyboard.append([InlineKeyboardButton(
             f"📌 {product['name']} - ${product['price']}",
@@ -488,20 +488,18 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def ask_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE, product_id: str):
-    """Ask user for quantity with product image"""
+    """Ask user for quantity"""
     context.user_data['selected_product'] = product_id
     
-    # Get product details to show name and image
+    # Get product details to show name
     products_data = await api_client.get_products()
     product_name = "Product"
-    product_image = None
     product_price = "N/A"
     
     if products_data:
         for p in products_data.get('products', []):
             if p['id'] == product_id:
                 product_name = p['name']
-                product_image = p.get('image')
                 product_price = p.get('price', 'N/A')
                 break
     
@@ -516,23 +514,11 @@ async def ask_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE, produ
     
     reply_markup = InlineKeyboardMarkup(keyboard)
     
-    # Send photo with caption if image exists, otherwise just text
-    if product_image:
-        caption = f"*{product_name}*\n\n💰 Price: ${product_price}\n\n*How many items would you like?*"
-        await update.callback_query.edit_message_media(
-            media=InputMediaPhoto(
-                media=product_image,
-                caption=caption,
-                parse_mode="Markdown"
-            ),
-            reply_markup=reply_markup
-        )
-    else:
-        await update.callback_query.edit_message_text(
-            text=f"*{product_name}*\n💰 Price: ${product_price}\n\n*How many items would you like?*",
-            reply_markup=reply_markup,
-            parse_mode="Markdown"
-        )
+    await update.callback_query.edit_message_text(
+        text=f"*{product_name}*\n💰 Price: ${product_price}\n\n*How many items would you like?*",
+        reply_markup=reply_markup,
+        parse_mode="Markdown"
+    )
 
 async def handle_quantity_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle quantity selection and add to cart"""
