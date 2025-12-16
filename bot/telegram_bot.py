@@ -269,6 +269,108 @@ async def products_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Show products"""
     await show_products(update, context)
 
+async def restock_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin restock command"""
+    # Check if user provided arguments
+    if not context.args or len(context.args) < 2:
+        help_text = """
+*📦 Admin Restock Panel*
+
+*Usage:*
+/restock <product_id> <quantity> <admin_token>
+
+*Example:*
+/restock PROD001 10 admin-secret-key-2024
+
+*Available Products:*
+• PROD001 - Laptop
+• PROD002 - Smartphone
+• PROD003 - Headphones
+• PROD004 - Tablet
+• PROD005 - Smartwatch
+
+*Note:* This command is for authorized administrators only.
+        """
+        await update.message.reply_text(help_text, parse_mode="Markdown")
+        return
+    
+    try:
+        product_id = context.args[0]
+        quantity = int(context.args[1])
+        admin_token = context.args[2] if len(context.args) > 2 else "invalid-token"
+        
+        # Call restock API
+        async with aiohttp.ClientSession() as session:
+            url = f"{BACKEND_URL.replace('/api', '')}/api/admin/restock"
+            payload = {
+                "admin_token": admin_token,
+                "product_id": product_id,
+                "quantity": quantity
+            }
+            
+            async with session.post(url, json=payload) as response:
+                data = await response.json()
+                
+                if response.status == 200:
+                    product = data.get('product', {})
+                    restock_message = f"""
+✅ *Restocking Successful!*
+
+📦 *Product:* {product.get('name', 'Unknown')}
+🆔 *Product ID:* {product.get('id', 'N/A')}
+📊 *Previous Stock:* {product.get('previousStock', 'N/A')}
+➕ *Added Quantity:* {product.get('addedQuantity', 'N/A')}
+📈 *New Stock:* {product.get('newStock', 'N/A')}
+⏰ *Timestamp:* {product.get('timestamp', 'N/A')}
+                    """
+                    await update.message.reply_text(restock_message, parse_mode="Markdown")
+                else:
+                    error_message = f"❌ Restocking Failed!\n\n{data.get('error', 'Unknown error')}"
+                    await update.message.reply_text(error_message, parse_mode="Markdown")
+    except ValueError:
+        await update.message.reply_text("❌ Invalid quantity. Please provide a valid number.", parse_mode="Markdown")
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error: {str(e)}", parse_mode="Markdown")
+
+async def inventory_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Admin inventory status command"""
+    if not context.args:
+        await update.message.reply_text(
+            "Usage: /inventory <admin_token>",
+            parse_mode="Markdown"
+        )
+        return
+    
+    try:
+        admin_token = context.args[0]
+        
+        # Call inventory API
+        async with aiohttp.ClientSession() as session:
+            url = f"{BACKEND_URL.replace('/api', '')}/api/admin/inventory"
+            
+            async with session.get(url, params={"admin_token": admin_token}) as response:
+                data = await response.json()
+                
+                if response.status == 200:
+                    inventory = data.get('inventory', [])
+                    message = "*📊 Current Inventory Status*\n\n"
+                    
+                    for product in inventory:
+                        status = "✅" if product['stock'] > 10 else "⚠️" if product['stock'] > 0 else "❌"
+                        message += f"{status} *{product['name']}*\n"
+                        message += f"   💰 Price: ${product['price']}\n"
+                        message += f"   📦 Stock: {product['stock']} items\n"
+                        message += f"   📁 Category: {product.get('category', 'N/A')}\n\n"
+                    
+                    await update.message.reply_text(message, parse_mode="Markdown")
+                else:
+                    await update.message.reply_text(
+                        f"❌ {data.get('error', 'Failed to fetch inventory')}",
+                        parse_mode="Markdown"
+                    )
+    except Exception as e:
+        await update.message.reply_text(f"❌ Error: {str(e)}", parse_mode="Markdown")
+
 async def show_products(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Fetch and display products"""
     products_data = await api_client.get_products()
@@ -690,6 +792,8 @@ def main():
     application.add_handler(CommandHandler("start", start))
     application.add_handler(CommandHandler("help", help_command))
     application.add_handler(CommandHandler("products", products_command))
+    application.add_handler(CommandHandler("restock", restock_command))
+    application.add_handler(CommandHandler("inventory", inventory_command))
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     application.add_handler(conv_handler)
     application.add_handler(CallbackQueryHandler(handle_quantity_selection, pattern=r"^qty_"))
