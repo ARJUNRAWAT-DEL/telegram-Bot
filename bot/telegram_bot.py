@@ -488,19 +488,21 @@ async def button_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
 async def ask_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE, product_id: str):
-    """Ask user for quantity"""
+    """Ask user for quantity with product photo"""
     context.user_data['selected_product'] = product_id
     
-    # Get product details to show name
+    # Get product details to show name and photo
     products_data = await api_client.get_products()
     product_name = "Product"
     product_price = "N/A"
+    product_image = None
     
     if products_data:
         for p in products_data.get('products', []):
             if p['id'] == product_id:
                 product_name = p['name']
                 product_price = p.get('price', 'N/A')
+                product_image = p.get('image')
                 break
     
     keyboard = [
@@ -513,12 +515,44 @@ async def ask_quantity(update: Update, context: ContextTypes.DEFAULT_TYPE, produ
     ]
     
     reply_markup = InlineKeyboardMarkup(keyboard)
+    caption = f"*{product_name}*\n💰 Price: ${product_price}\n\n*How many items would you like?*"
     
-    await update.callback_query.edit_message_text(
-        text=f"*{product_name}*\n💰 Price: ${product_price}\n\n*How many items would you like?*",
-        reply_markup=reply_markup,
-        parse_mode="Markdown"
-    )
+    try:
+        # Try to send with photo if available
+        if product_image:
+            # Convert relative path to absolute path
+            image_path = os.path.join(os.path.dirname(__file__), '..', product_image.lstrip('./'))
+            
+            if os.path.exists(image_path):
+                # Use local file
+                with open(image_path, 'rb') as photo:
+                    await update.callback_query.edit_message_media(
+                        media=InputMediaPhoto(media=photo, caption=caption, parse_mode="Markdown"),
+                        reply_markup=reply_markup
+                    )
+            else:
+                # Fallback to text if image doesn't exist
+                logger.warning(f"Image not found: {image_path}, falling back to text")
+                await update.callback_query.edit_message_text(
+                    text=caption,
+                    reply_markup=reply_markup,
+                    parse_mode="Markdown"
+                )
+        else:
+            # Fallback to text if no image
+            await update.callback_query.edit_message_text(
+                text=caption,
+                reply_markup=reply_markup,
+                parse_mode="Markdown"
+            )
+    except Exception as e:
+        # If photo fails, fall back to text
+        logger.warning(f"Could not send photo: {str(e)}, falling back to text")
+        await update.callback_query.edit_message_text(
+            text=caption,
+            reply_markup=reply_markup,
+            parse_mode="Markdown"
+        )
 
 async def handle_quantity_selection(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle quantity selection and add to cart"""
